@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { createTerm, defaultTerms } from "../scripts/data.js";
 import { filterTerms } from "../scripts/filters.js";
-import { loadTerms, saveTerms, resetTerms } from "../scripts/storage.js";
+import { exportTermsBackup, importTermsBackup, loadTerms, saveTerms, resetTerms } from "../scripts/storage.js";
 import { updateTermContent } from "../scripts/termActions.js";
 
 function createFakeStorage() {
@@ -93,4 +93,25 @@ test("取消编辑时不改变原词条数据", () => {
   const termsAfterCancel = [...termsBeforeCancel];
 
   assert.deepEqual(termsAfterCancel, termsBeforeCancel);
+});
+
+test("可以把词条导出成带版本信息的 JSON 备份", () => {
+  const backupText = exportTermsBackup(defaultTerms.slice(0, 1));
+  const backup = JSON.parse(backupText);
+
+  assert.equal(backup.app, "ai-work-dictionary");
+  assert.equal(backup.version, 1);
+  assert.equal(backup.terms.length, 1);
+});
+
+test("可以从有效备份导入词条，并拒绝坏格式", () => {
+  const backupText = exportTermsBackup(defaultTerms.slice(0, 2));
+  const imported = importTermsBackup(backupText);
+
+  assert.equal(imported.ok, true);
+  assert.equal(imported.terms.length, 2);
+
+  const badImport = importTermsBackup("{ bad json");
+  assert.equal(badImport.ok, false);
+  assert.equal(badImport.terms, null);
 });

@@ -1,4 +1,6 @@
 export const STORAGE_KEY = "ai-learning-dictionary-v2";
+const BACKUP_APP = "ai-work-dictionary";
+const BACKUP_VERSION = 1;
 
 function cloneTerms(terms) {
   return terms.map((term) => ({ ...term }));
@@ -43,4 +45,31 @@ export function resetTerms(storage, defaultTerms) {
   const freshTerms = cloneTerms(defaultTerms);
   saveTerms(storage, freshTerms);
   return freshTerms;
+}
+
+export function exportTermsBackup(terms) {
+  return JSON.stringify({
+    app: BACKUP_APP,
+    version: BACKUP_VERSION,
+    exportedAt: new Date().toISOString(),
+    terms: cloneTerms(terms)
+  }, null, 2);
+}
+
+export function importTermsBackup(backupText) {
+  try {
+    const parsed = JSON.parse(backupText);
+    if (
+      parsed?.app !== BACKUP_APP ||
+      parsed?.version !== BACKUP_VERSION ||
+      !Array.isArray(parsed?.terms) ||
+      !parsed.terms.every(isValidTerm)
+    ) {
+      return { ok: false, terms: null, message: "备份文件格式不正确。" };
+    }
+
+    return { ok: true, terms: cloneTerms(parsed.terms), message: "导入成功。" };
+  } catch {
+    return { ok: false, terms: null, message: "无法读取这个备份文件。" };
+  }
 }
