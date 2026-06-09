@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI 学习词典</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page-shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">GitHub + AI Coding</p>
+        <h1>AI 学习词典</h1>
+        <p class="intro">把 GitHub、CLI、Skill、Vibe Coding 等新词整理成能搜索、能筛选的学习卡片。</p>
+      </div>
+      <div class="summary-card" aria-label="词典统计">
+        <span class="summary-number" id="termCount">0</span>
+        <span class="summary-label">个入门词汇</span>
+      </div>
+    </section>
+
+    <section class="toolbar" aria-label="词典工具">
+      <label class="search-label" for="searchInput">搜索词汇</label>
+      <input id="searchInput" class="search-input" type="search" placeholder="例如：CLI、Commit、分支">
+
+      <div class="filter-group" aria-label="分类筛选">
+        <button class="filter-button active" type="button" data-category="all">全部</button>
+        <button class="filter-button" type="button" data-category="github">GitHub / Git</button>
+        <button class="filter-button" type="button" data-category="ai">AI 编程</button>
+        <button class="filter-button" type="button" data-category="process">项目流程</button>
+      </div>
+    </section>
+
+    <section class="dictionary-grid" id="dictionaryGrid" aria-live="polite"></section>
+    <p class="empty-state" id="emptyState" hidden>没有找到匹配的词。换个关键词试试。</p>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
