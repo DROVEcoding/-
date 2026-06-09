@@ -1,83 +1,100 @@
-# AI Learning Dictionary V2 Management Design
+# AI 学习词典 V2 管理版设计文档
 
-## Goal
+## 目标
 
-Upgrade the AI learning dictionary from a static glossary into a small personal learning app.
+把 `AI 学习词典` 从一个“只能查看的静态词典”，升级成一个“可以自己管理的小型学习应用”。
 
-V1 shows fixed terms. V2 lets the learner manage the dictionary:
+V1 的能力是：
 
-- Add custom terms.
-- Delete terms.
-- Mark each term as `不会`, `在学`, or `已会`.
-- Filter by learning status.
-- Keep changes after refreshing the browser.
-- Reset everything back to the default dictionary.
+- 展示固定词条
+- 搜索词条
+- 按分类筛选
 
-This version is also a teaching step for modular JavaScript.
+V2 要新增：
 
-## Current State
+- 新增自定义词条
+- 删除词条
+- 给每个词条标记学习状态：`不会`、`在学`、`已会`
+- 按学习状态筛选
+- 刷新浏览器后保留修改
+- 一键重置回默认词库
 
-The project currently has:
+这次升级还有一个教学目标：学习更模块化的 JavaScript 项目结构。
 
-- `index.html`: page structure.
-- `style.css`: visual styling.
-- `script.js`: fixed glossary data, search, category filtering, rendering, and events.
-- `README.md`: beginner project explanation.
+## 当前项目状态
 
-`script.js` is still small in V1. V2 will add storage, custom data, forms, status updates, deletion, and reset behavior. Keeping all of that in one file would make the code harder to teach and maintain.
+当前项目主要文件是：
 
-## User Experience
+- `index.html`：网页结构
+- `style.css`：页面样式
+- `script.js`：固定词条数据、搜索、分类筛选、渲染和事件绑定
+- `README.md`：项目说明
 
-The V2 page keeps the existing dictionary layout and adds a management area.
+V1 的 `script.js` 还比较短，所以放在一个文件里可以接受。
 
-The user can:
+但 V2 会增加：
 
-1. Type a new term.
-2. Choose a category.
-3. Write a beginner-friendly definition.
-4. Write the problem the term solves.
-5. Add the term to the card grid.
-6. Mark any term as:
+- 本地保存
+- 新增表单
+- 删除逻辑
+- 学习状态
+- 状态筛选
+- 重置默认词库
+
+如果继续把所有逻辑都塞进 `script.js`，后面会不利于学习和维护。因此 V2 开始拆成多个 JavaScript 模块。
+
+## 用户体验
+
+V2 保留现在的词典页面，并增加一个“词条管理”区域。
+
+用户可以：
+
+1. 输入新词条名称
+2. 选择分类
+3. 填写新手友好的解释
+4. 填写“这个词解决什么问题”
+5. 添加词条到卡片列表
+6. 给任意词条标记学习状态：
    - `不会`
    - `在学`
    - `已会`
-7. Filter cards by:
-   - category
-   - learning status
-   - search text
-8. Delete a term.
-9. Reset the dictionary to the default V1 terms.
+7. 按以下条件筛选：
+   - 搜索关键词
+   - 词条分类
+   - 学习状态
+8. 删除词条
+9. 重置回默认词库
 
-When a user refreshes the page, custom terms and learning statuses remain because they are saved in `localStorage`.
+刷新网页后，用户新增的词条和学习状态仍然保留，因为数据会保存到浏览器的 `localStorage`。
 
-## Scope
+## V2 范围
 
-V2 includes:
+V2 要做：
 
-- Add term.
-- Delete term.
-- Learning status per term.
-- Status filter.
-- Save all current terms to `localStorage`.
-- Load saved terms on page start.
-- Reset to default terms.
-- Update README with V2 behavior.
+- 新增词条
+- 删除词条
+- 给词条设置学习状态
+- 新增学习状态筛选
+- 把当前词条列表保存到 `localStorage`
+- 页面启动时读取已保存的词条
+- 重置默认词库
+- 更新 `README.md`
 
-V2 does not include:
+V2 暂时不做：
 
-- Editing an existing term.
-- Drag and drop sorting.
-- Account login.
-- Cloud sync.
-- Database.
-- Import/export JSON.
-- Frameworks such as React or Vue.
+- 编辑已有词条
+- 拖拽排序
+- 登录账号
+- 云端同步
+- 数据库
+- JSON 导入导出
+- React / Vue 等前端框架
 
-Those are good V3+ candidates.
+这些功能适合放到 V3 或更后面的版本。
 
-## File Structure
+## 文件结构
 
-V2 replaces the single `script.js` with focused JavaScript modules:
+V2 会把原来的单个 `script.js` 拆成多个更清晰的 JavaScript 文件：
 
 ```text
 ai-learning-dictionary/
@@ -92,147 +109,154 @@ ai-learning-dictionary/
     app.js
 ```
 
-Responsibilities:
+每个文件的职责：
 
-- `scripts/data.js`: default glossary terms and category/status labels.
-- `scripts/storage.js`: read, write, and reset data in `localStorage`.
-- `scripts/filters.js`: combine search text, category filter, and status filter.
-- `scripts/render.js`: render cards, filter buttons, status controls, and empty states.
-- `scripts/app.js`: hold app state, bind events, handle form submission, deletion, status changes, reset, and app startup.
+- `scripts/data.js`：默认词库、分类名称、学习状态名称
+- `scripts/storage.js`：读取、保存、重置 `localStorage`
+- `scripts/filters.js`：处理搜索、分类筛选、学习状态筛选
+- `scripts/render.js`：把词条数据渲染成网页卡片
+- `scripts/app.js`：保存当前页面状态、绑定按钮事件、处理新增/删除/状态切换/重置、启动应用
 
-The old `script.js` should be deleted after the module files are working and `index.html` no longer references it.
+旧的 `script.js` 会在新模块可用后删除，`index.html` 也会改成只加载 `scripts/app.js`。
 
-## Data Model
+## 数据结构
 
-Each term should have:
+每个词条包含：
 
-- `id`: stable unique string used for status changes and deletion.
-- `term`: displayed word.
-- `category`: `github`, `ai`, or `process`.
-- `categoryLabel`: displayed category label.
-- `definition`: beginner-friendly explanation.
-- `solves`: the problem this term exists to solve.
-- `status`: `unknown`, `learning`, or `known`.
-- `isDefault`: boolean indicating whether the term came from the default dictionary.
+- `id`：稳定的唯一编号，用来删除词条和切换状态
+- `term`：词条名称
+- `category`：分类，取值为 `github`、`ai`、`process`
+- `categoryLabel`：显示给用户看的中文分类名
+- `definition`：新手友好的解释
+- `solves`：这个词解决什么问题
+- `status`：学习状态，取值为 `unknown`、`learning`、`known`
+- `isDefault`：是否来自默认词库
 
-Default V1 terms should start with:
+默认词条初始状态：
 
 ```text
 status: "unknown"
 isDefault: true
 ```
 
-Custom user terms should use:
+用户新增词条：
 
 ```text
 isDefault: false
 ```
 
-## Storage Behavior
+## 保存逻辑
 
-Use one `localStorage` key:
+使用一个 `localStorage` key：
 
 ```text
 ai-learning-dictionary-v2
 ```
 
-On app start:
+页面启动时：
 
-1. Try to read saved terms from `localStorage`.
-2. If valid saved terms exist, use them.
-3. If nothing is saved, use the default terms from `data.js`.
+1. 尝试从 `localStorage` 读取保存过的词条
+2. 如果保存的数据有效，就使用保存的数据
+3. 如果没有保存数据，或者保存数据不可用，就使用默认词库
 
-When the user adds, deletes, or changes status:
+当用户新增、删除、切换学习状态时：
 
-1. Update the in-memory term list.
-2. Save the whole term list to `localStorage`.
-3. Re-render the visible cards.
+1. 先更新页面内存里的词条列表
+2. 再把完整词条列表保存到 `localStorage`
+3. 最后重新渲染页面卡片
 
-When the user resets:
+当用户点击重置时：
 
-1. Replace the in-memory term list with the default terms.
-2. Save the default terms to `localStorage`.
-3. Clear form inputs only if needed.
-4. Re-render.
+1. 用默认词库替换当前词条列表
+2. 保存默认词库到 `localStorage`
+3. 重新渲染页面
 
-## Filtering Behavior
+`localStorage` 可以理解成：浏览器给这个网页准备的一个小本子。它不是云端数据库，只保存在当前浏览器里。
 
-The visible card list is controlled by three filters:
+## 筛选逻辑
 
-- Search text.
-- Category.
-- Learning status.
+V2 会同时支持三种筛选条件：
 
-All filters apply together.
+- 搜索关键词
+- 分类
+- 学习状态
 
-Examples:
+三个条件会一起生效。
 
-- Search `CLI` with category `全部` and status `全部`: show matching CLI terms.
-- Category `AI 编程` with status `不会`: show only AI terms marked unknown.
-- Status `已会` with empty search: show all known terms.
+例子：
 
-If nothing matches, show the empty result message.
+- 搜索 `CLI`，分类为 `全部`，状态为 `全部`：显示包含 CLI 的词条
+- 分类为 `AI 编程`，状态为 `不会`：只显示 AI 编程里还不会的词条
+- 状态为 `已会`，搜索框为空：显示所有已会词条
 
-## Form Validation
+如果没有任何匹配结果，就显示空结果提示。
 
-The add-term form should require:
+## 表单校验
 
-- term name,
-- category,
-- definition,
-- problem solved.
+新增词条表单需要填写：
 
-If a required field is missing, show a short message near the form and do not add the card.
+- 词条名称
+- 分类
+- 解释
+- 解决的问题
 
-The first implementation can avoid complex duplicate detection. If a user adds the same term twice, both cards can appear. Duplicate prevention can be a V3 improvement.
+如果缺少必填内容，就在表单附近显示一个简短提示，不新增词条。
 
-## Visual Direction
+V2 暂时不做复杂的重复词条检测。如果用户添加两个同名词条，两个都会显示。防重复可以作为 V3 优化。
 
-Keep the current calm study-focused style.
+## 视觉设计
 
-Add:
+保持 V1 清晰、安静、适合学习的风格。
 
-- A compact form area above the card grid.
-- Status chips or segmented controls on each card.
-- A status filter row near the category filters.
-- A clear but not scary reset button.
-- Delete buttons that are visible but not visually dominant.
+V2 新增：
 
-The page should remain readable on mobile. Form fields can stack vertically on small screens.
+- 紧凑的新增词条表单
+- 每张卡片上的学习状态按钮
+- 学习状态筛选按钮
+- 不吓人的“重置默认词库”按钮
+- 可见但不过分抢眼的删除按钮
 
-## Risks
+手机窄屏下：
 
-- `localStorage` data can become invalid if old saved data has a different shape.
-- Deleting terms can surprise the user if there is no feedback.
-- Too many controls can make the page feel busy.
-- Splitting JavaScript into modules requires `type="module"` in `index.html`.
+- 表单字段纵向排列
+- 卡片继续单列显示
+- 按钮可以自动换行
 
-Mitigations:
+## 风险和处理方式
 
-- If saved data is invalid, fall back to default terms.
-- Use direct button labels such as `删除`.
-- Keep form and filters compact.
-- Update `index.html` to load only `scripts/app.js` as a module.
+风险：
 
-## Verification Plan
+- 旧的 `localStorage` 数据结构可能和新版本不一致
+- 删除词条可能让用户误操作
+- 控件太多会让页面变乱
+- JavaScript 模块需要 `index.html` 使用 `type="module"`
 
-Manual checks:
+处理方式：
 
-- Open `index.html` locally.
-- Confirm default terms render.
-- Add a custom term and confirm it appears.
-- Refresh the page and confirm the custom term remains.
-- Mark a term as `已会`, refresh, and confirm the status remains.
-- Filter by `不会`, `在学`, and `已会`.
-- Combine search, category, and status filters.
-- Delete a custom term and confirm it disappears after refresh.
-- Reset the dictionary and confirm default terms return.
-- Confirm the old `script.js` is no longer referenced.
-- Confirm the layout works on a narrow browser width.
+- 保存数据无效时，自动回到默认词库
+- 删除按钮使用明确文字 `删除`
+- 表单和筛选区保持紧凑
+- `index.html` 只加载 `scripts/app.js`，并加上 `type="module"`
 
-Git checks:
+## 验证计划
 
-- Commit the V2 design.
-- Commit module split separately from UI polish if possible.
-- Push to GitHub after local verification.
-- Verify GitHub Pages updates after push.
+本地手动检查：
+
+- 打开 `index.html`
+- 默认词条能正常显示
+- 新增一个自定义词条，确认它出现在页面上
+- 刷新页面，确认自定义词条还在
+- 把一个词条标记为 `已会`，刷新后确认状态还在
+- 分别筛选 `不会`、`在学`、`已会`
+- 同时使用搜索、分类、学习状态筛选
+- 删除一个自定义词条，刷新后确认它仍然消失
+- 点击重置，确认恢复默认词库
+- 确认旧 `script.js` 不再被 `index.html` 引用
+- 缩窄浏览器宽度，确认布局仍然可读
+
+Git 检查：
+
+- 单独提交 V2 设计文档
+- 模块拆分和功能实现分阶段提交
+- 本地验证通过后 push 到 GitHub
+- push 后检查 GitHub Pages 是否更新
