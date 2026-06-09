@@ -121,3 +121,21 @@ http://localhost:8000
 - `Git`：记录每次修改
 - `GitHub`：上传和展示项目
 - `GitHub Pages`：把网页发布成可访问的网址
+
+## V5 Desktop Learning
+
+V5 adds an Electron desktop shell. The detailed learning note is in:
+
+```text
+docs/v5-electron-desktop.md
+```
+
+New desktop-related files:
+
+| File / module | Purpose | Beginner meaning |
+|---|---|---|
+| `package.json` | npm project config | Records commands such as test, desktop run, and desktop build. |
+| `package-lock.json` | dependency lock file | Freezes exact tool versions so another computer installs the same dependencies. |
+| `desktop/main.cjs` | Electron main process | Creates the desktop window and loads the existing web page. |
+| `.github/workflows/desktop-build.yml` | cloud desktop build | Lets GitHub build the Windows portable app when local download is slow. |
+| `docs/v5-electron-desktop.md` | V5 learning note | Explains Electron, packaging, artifacts, and production limits. |
