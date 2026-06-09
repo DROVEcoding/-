@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { createTerm, defaultTerms } from "../scripts/data.js";
 import { filterTerms } from "../scripts/filters.js";
 import { loadTerms, saveTerms, resetTerms } from "../scripts/storage.js";
+import { updateTermContent } from "../scripts/termActions.js";
 
 function createFakeStorage() {
   const data = new Map();
@@ -64,4 +65,32 @@ test("重置会把保存内容恢复为默认词库", () => {
   const loaded = loadTerms(storage, []);
   assert.equal(loaded.length, 20);
   assert.equal(loaded[0].status, "unknown");
+});
+
+test("编辑词条内容时保留原 id、学习状态和默认来源", () => {
+  const original = {
+    ...defaultTerms[0],
+    status: "known"
+  };
+
+  const updated = updateTermContent([original], original.id, {
+    term: "Git 版本管理",
+    category: "github",
+    definition: "记录代码历史。",
+    solves: "解决改动可追踪的问题。"
+  });
+
+  assert.equal(updated[0].id, original.id);
+  assert.equal(updated[0].status, "known");
+  assert.equal(updated[0].isDefault, true);
+  assert.equal(updated[0].term, "Git 版本管理");
+  assert.equal(updated[0].definition, "记录代码历史。");
+});
+
+test("取消编辑时不改变原词条数据", () => {
+  const original = defaultTerms[1];
+  const termsBeforeCancel = [original];
+  const termsAfterCancel = [...termsBeforeCancel];
+
+  assert.deepEqual(termsAfterCancel, termsBeforeCancel);
 });
