@@ -1,10 +1,20 @@
 import { categoryLabels, createTerm, defaultTerms, statusLabels } from "./data.js";
 import { filterTerms } from "./filters.js";
 import { clearSession, createLocalUser, loadSession, saveSession } from "./auth.js";
-import { exportTermsBackup, importTermsBackup, loadTerms, resetTerms, saveTerms } from "./storage.js";
+import {
+  downloadTermsFromCloud,
+  getCloudUser,
+  signInCloudUser,
+  signOutCloudUser,
+  signUpCloudUser,
+  uploadTermsToCloud
+} from "./cloudSync.js";
+import { createSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js";
+import { exportTermsBackup, importTermsBackup, loadTerms, loadTermsOrResetIfEmpty, resetTerms, saveTerms } from "./storage.js";
 import { renderTerms } from "./render.js";
 import { updateTermContent } from "./termActions.js";
 
+const supabase = await createSupabaseClient();
 const loginForm = document.querySelector("#loginForm");
 const usernameInput = document.querySelector("#usernameInput");
 const authSession = document.querySelector("#authSession");
@@ -17,6 +27,7 @@ const categoryButtons = document.querySelectorAll("[data-category]");
 const statusButtons = document.querySelectorAll("[data-status]");
 const emptyState = document.querySelector("#emptyState");
 const termCount = document.querySelector("#termCount");
+const workspaceLabel = document.querySelector("#workspaceLabel");
 const termForm = document.querySelector("#termForm");
 const termInput = document.querySelector("#termInput");
 const categoryInput = document.querySelector("#categoryInput");
@@ -31,9 +42,20 @@ const cancelEditButton = document.querySelector("#cancelEditButton");
 const exportButton = document.querySelector("#exportButton");
 const importInput = document.querySelector("#importInput");
 const backupMessage = document.querySelector("#backupMessage");
+const cloudAuthForm = document.querySelector("#cloudAuthForm");
+const cloudEmailInput = document.querySelector("#cloudEmailInput");
+const cloudPasswordInput = document.querySelector("#cloudPasswordInput");
+const cloudSignUpButton = document.querySelector("#cloudSignUpButton");
+const cloudSession = document.querySelector("#cloudSession");
+const cloudUserDisplay = document.querySelector("#cloudUserDisplay");
+const uploadCloudButton = document.querySelector("#uploadCloudButton");
+const downloadCloudButton = document.querySelector("#downloadCloudButton");
+const cloudSignOutButton = document.querySelector("#cloudSignOutButton");
+const cloudMessage = document.querySelector("#cloudMessage");
 
 const state = {
   currentUser: loadSession(window.localStorage),
+  cloudUser: null,
   terms: [],
   category: "all",
   status: "all",
@@ -41,7 +63,7 @@ const state = {
   editingTermId: null
 };
 
-state.terms = loadTerms(window.localStorage, defaultTerms, state.currentUser?.id);
+state.terms = loadTerms(window.localStorage, defaultTerms, getActiveTermsUserId());
 
 function setActiveButton(buttons, activeValue, dataName) {
   buttons.forEach((button) => {
@@ -51,6 +73,7 @@ function setActiveButton(buttons, activeValue, dataName) {
 
 function renderApp() {
   renderAuth();
+  renderCloudAuth();
 
   const visibleTerms = filterTerms(state.terms, {
     query: state.query,
@@ -67,17 +90,58 @@ function renderApp() {
 
   emptyState.hidden = visibleTerms.length > 0;
   termCount.textContent = state.terms.length;
+  workspaceLabel.textContent = getActiveWorkspaceLabel();
 }
 
 function persistAndRender() {
-  saveTerms(window.localStorage, state.terms, state.currentUser?.id);
+  saveTerms(window.localStorage, state.terms, getActiveTermsUserId());
   renderApp();
+}
+
+function getActiveTermsUserId() {
+  return state.cloudUser ? `cloud:${state.cloudUser.id}` : state.currentUser?.id;
+}
+
+function getActiveWorkspaceLabel() {
+  if (state.cloudUser) {
+    return `云端空间：${state.cloudUser.email}`;
+  }
+
+  if (state.currentUser) {
+    return `本地空间：${state.currentUser.displayName}`;
+  }
+
+  return "访客本地空间";
+}
+
+function loadCurrentWorkspaceTerms() {
+  return loadTerms(window.localStorage, defaultTerms, getActiveTermsUserId());
+}
+
+function loadLocalFallbackTermsAfterCloudSignOut() {
+  return loadTermsOrResetIfEmpty(window.localStorage, defaultTerms, getActiveTermsUserId());
 }
 
 function showLoginMessage(message, type = "error") {
   loginMessage.textContent = message;
   loginMessage.dataset.type = type;
   loginMessage.hidden = !message;
+}
+
+function showCloudMessage(message, type = "error") {
+  cloudMessage.textContent = message;
+  cloudMessage.dataset.type = type;
+  cloudMessage.hidden = !message;
+}
+
+function setCloudButtonsDisabled(isDisabled) {
+  cloudSignUpButton.disabled = isDisabled;
+  uploadCloudButton.disabled = isDisabled;
+  downloadCloudButton.disabled = isDisabled;
+  cloudSignOutButton.disabled = isDisabled;
+  cloudAuthForm.querySelectorAll("button").forEach((button) => {
+    button.disabled = isDisabled;
+  });
 }
 
 function renderAuth() {
@@ -89,10 +153,36 @@ function renderAuth() {
     : "";
 }
 
+function renderCloudAuth() {
+  const isConfigured = isSupabaseConfigured();
+  const isLoggedIn = Boolean(state.cloudUser);
+
+  cloudAuthForm.hidden = !isConfigured || isLoggedIn;
+  cloudSession.hidden = !isLoggedIn;
+  cloudUserDisplay.textContent = isLoggedIn
+    ? `云端账号：${state.cloudUser.email}`
+    : "";
+
+  if (!isConfigured) {
+    showCloudMessage("Supabase 还没有配置。请先按 V7 文档创建项目、建表，并填写 scripts/supabaseConfig.js。");
+  }
+}
+
 function switchUser(user) {
   state.currentUser = user;
-  state.terms = loadTerms(window.localStorage, defaultTerms, state.currentUser?.id);
+  state.terms = loadCurrentWorkspaceTerms();
   exitEditMode();
+  renderApp();
+}
+
+async function refreshCloudUser() {
+  const result = await getCloudUser(supabase);
+  state.cloudUser = result.ok ? result.user : null;
+  if (result.ok) {
+    state.terms = loadCurrentWorkspaceTerms();
+    exitEditMode();
+    showCloudMessage(result.message, "success");
+  }
   renderApp();
 }
 
@@ -247,7 +337,7 @@ resetButton.addEventListener("click", () => {
     return;
   }
 
-  state.terms = resetTerms(window.localStorage, defaultTerms, state.currentUser?.id);
+  state.terms = resetTerms(window.localStorage, defaultTerms, getActiveTermsUserId());
   showFormMessage("已重置为默认词库。", "success");
   renderApp();
 });
@@ -281,7 +371,7 @@ importInput.addEventListener("change", async () => {
   }
 
   state.terms = result.terms;
-  saveTerms(window.localStorage, state.terms, state.currentUser?.id);
+  saveTerms(window.localStorage, state.terms, getActiveTermsUserId());
   exitEditMode();
   renderApp();
   showBackupMessage(`导入成功，共恢复 ${state.terms.length} 个词条。`, "success");
@@ -309,6 +399,92 @@ logoutButton.addEventListener("click", () => {
   switchUser(null);
 });
 
+cloudAuthForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  setCloudButtonsDisabled(true);
+  showCloudMessage("正在登录云端账号，请稍等...", "success");
+  try {
+    const result = await signInCloudUser(supabase, cloudEmailInput.value, cloudPasswordInput.value);
+    showCloudMessage(result.message, result.ok ? "success" : "error");
+    if (result.ok) {
+      cloudPasswordInput.value = "";
+      await refreshCloudUser();
+    }
+  } finally {
+    setCloudButtonsDisabled(false);
+  }
+});
+
+cloudSignUpButton.addEventListener("click", async () => {
+  setCloudButtonsDisabled(true);
+  showCloudMessage("正在注册云端账号，请稍等...", "success");
+  try {
+    const result = await signUpCloudUser(supabase, cloudEmailInput.value, cloudPasswordInput.value);
+    showCloudMessage(result.message, result.ok ? "success" : "error");
+  } finally {
+    setCloudButtonsDisabled(false);
+  }
+});
+
+uploadCloudButton.addEventListener("click", async () => {
+  setCloudButtonsDisabled(true);
+  showCloudMessage("正在上传到云端，请稍等...", "success");
+  try {
+  const userResult = await getCloudUser(supabase);
+  if (!userResult.ok) {
+    showCloudMessage(userResult.message);
+    return;
+  }
+
+  const result = await uploadTermsToCloud(supabase, userResult.user.id, state.terms);
+  showCloudMessage(result.message, result.ok ? "success" : "error");
+  } finally {
+    setCloudButtonsDisabled(false);
+  }
+});
+
+downloadCloudButton.addEventListener("click", async () => {
+  setCloudButtonsDisabled(true);
+  showCloudMessage("正在从云端恢复，请稍等...", "success");
+  try {
+  const userResult = await getCloudUser(supabase);
+  if (!userResult.ok) {
+    showCloudMessage(userResult.message);
+    return;
+  }
+
+  const result = await downloadTermsFromCloud(supabase, userResult.user.id);
+  if (!result.ok) {
+    showCloudMessage(result.message);
+    return;
+  }
+
+  state.terms = result.terms;
+  saveTerms(window.localStorage, state.terms, getActiveTermsUserId());
+  exitEditMode();
+  renderApp();
+  showCloudMessage(result.message, "success");
+  } finally {
+    setCloudButtonsDisabled(false);
+  }
+});
+
+cloudSignOutButton.addEventListener("click", async () => {
+  setCloudButtonsDisabled(true);
+  showCloudMessage("正在退出云端账号，请稍等...", "success");
+  try {
+    const result = await signOutCloudUser(supabase);
+    state.cloudUser = null;
+    state.terms = loadLocalFallbackTermsAfterCloudSignOut();
+    exitEditMode();
+    showCloudMessage(result.message, result.ok ? "success" : "error");
+    renderApp();
+  } finally {
+    setCloudButtonsDisabled(false);
+  }
+});
+
 // Service Worker 让网页具备离线缓存能力。失败时不影响正常在线使用。
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("service-worker.js").catch(() => {
@@ -317,3 +493,4 @@ if ("serviceWorker" in navigator) {
 }
 
 renderApp();
+refreshCloudUser();

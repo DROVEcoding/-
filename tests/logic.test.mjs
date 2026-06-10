@@ -2,9 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { clearSession, createLocalUser, loadSession, saveSession } from "../scripts/auth.js";
+import { createCloudBackupPayload } from "../scripts/cloudSync.js";
 import { createTerm, defaultTerms } from "../scripts/data.js";
 import { filterTerms } from "../scripts/filters.js";
-import { exportTermsBackup, getTermsStorageKey, importTermsBackup, loadTerms, saveTerms, resetTerms } from "../scripts/storage.js";
+import { exportTermsBackup, getTermsStorageKey, importTermsBackup, loadTerms, loadTermsOrResetIfEmpty, saveTerms, resetTerms } from "../scripts/storage.js";
 import { updateTermContent } from "../scripts/termActions.js";
 
 function createFakeStorage() {
@@ -66,6 +67,16 @@ test("重置会把保存内容恢复为默认词库", () => {
   const loaded = loadTerms(storage, []);
   assert.equal(loaded.length, 20);
   assert.equal(loaded[0].status, "unknown");
+});
+
+test("空的本地空间可以恢复默认词库", () => {
+  const storage = createFakeStorage();
+  saveTerms(storage, [], null);
+
+  const restored = loadTermsOrResetIfEmpty(storage, defaultTerms, null);
+
+  assert.equal(restored.length, 20);
+  assert.equal(loadTerms(storage, [], null).length, 20);
 });
 
 test("编辑词条内容时保留原 id、学习状态和默认来源", () => {
@@ -155,4 +166,13 @@ test("不同本地用户使用不同的词条保存位置", () => {
   assert.equal(getTermsStorageKey(alice.id), "ai-learning-dictionary-v2:user:alice");
   assert.equal(loadTerms(storage, defaultTerms, alice.id)[0].term, "Session");
   assert.equal(loadTerms(storage, defaultTerms, bob.id).length, defaultTerms.length);
+});
+
+test("云端同步 payload 会带上用户 id、词条和更新时间", () => {
+  const terms = defaultTerms.slice(0, 1);
+  const payload = createCloudBackupPayload("user-123", terms);
+
+  assert.equal(payload.owner_id, "user-123");
+  assert.deepEqual(payload.terms, terms);
+  assert.match(payload.updated_at, /^\d{4}-\d{2}-\d{2}T/);
 });
