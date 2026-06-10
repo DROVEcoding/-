@@ -62,7 +62,7 @@ const state = {
   editingTermId: null
 };
 
-state.terms = loadTerms(window.localStorage, defaultTerms, state.currentUser?.id);
+state.terms = loadTerms(window.localStorage, defaultTerms, getActiveTermsUserId());
 
 function setActiveButton(buttons, activeValue, dataName) {
   buttons.forEach((button) => {
@@ -92,8 +92,12 @@ function renderApp() {
 }
 
 function persistAndRender() {
-  saveTerms(window.localStorage, state.terms, state.currentUser?.id);
+  saveTerms(window.localStorage, state.terms, getActiveTermsUserId());
   renderApp();
+}
+
+function getActiveTermsUserId() {
+  return state.cloudUser ? `cloud:${state.cloudUser.id}` : state.currentUser?.id;
 }
 
 function showLoginMessage(message, type = "error") {
@@ -144,7 +148,7 @@ function renderCloudAuth() {
 
 function switchUser(user) {
   state.currentUser = user;
-  state.terms = loadTerms(window.localStorage, defaultTerms, state.currentUser?.id);
+  state.terms = loadTerms(window.localStorage, defaultTerms, getActiveTermsUserId());
   exitEditMode();
   renderApp();
 }
@@ -153,6 +157,8 @@ async function refreshCloudUser() {
   const result = await getCloudUser(supabase);
   state.cloudUser = result.ok ? result.user : null;
   if (result.ok) {
+    state.terms = loadTerms(window.localStorage, defaultTerms, getActiveTermsUserId());
+    exitEditMode();
     showCloudMessage(result.message, "success");
   }
   renderApp();
@@ -309,7 +315,7 @@ resetButton.addEventListener("click", () => {
     return;
   }
 
-  state.terms = resetTerms(window.localStorage, defaultTerms, state.currentUser?.id);
+  state.terms = resetTerms(window.localStorage, defaultTerms, getActiveTermsUserId());
   showFormMessage("已重置为默认词库。", "success");
   renderApp();
 });
@@ -343,7 +349,7 @@ importInput.addEventListener("change", async () => {
   }
 
   state.terms = result.terms;
-  saveTerms(window.localStorage, state.terms, state.currentUser?.id);
+  saveTerms(window.localStorage, state.terms, getActiveTermsUserId());
   exitEditMode();
   renderApp();
   showBackupMessage(`导入成功，共恢复 ${state.terms.length} 个词条。`, "success");
@@ -433,7 +439,7 @@ downloadCloudButton.addEventListener("click", async () => {
   }
 
   state.terms = result.terms;
-  saveTerms(window.localStorage, state.terms, state.currentUser?.id);
+  saveTerms(window.localStorage, state.terms, getActiveTermsUserId());
   exitEditMode();
   renderApp();
   showCloudMessage(result.message, "success");
@@ -448,6 +454,8 @@ cloudSignOutButton.addEventListener("click", async () => {
   try {
     const result = await signOutCloudUser(supabase);
     state.cloudUser = null;
+    state.terms = loadTerms(window.localStorage, defaultTerms, getActiveTermsUserId());
+    exitEditMode();
     showCloudMessage(result.message, result.ok ? "success" : "error");
     renderApp();
   } finally {
