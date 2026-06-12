@@ -9,6 +9,7 @@ import { exportTermsBackup, getTermsStorageKey, importTermsBackup, loadTerms, lo
 import { updateTermContent } from "../scripts/termActions.js";
 import { compareVersions } from "../scripts/version.js";
 import { canManagePublicTerms, createDefaultProfile, getRoleLabel } from "../scripts/permissions.js";
+import { createFeedbackPayload, validateFeedbackMessage } from "../scripts/feedback.js";
 import { canManageMember, canManageOrganization, getAuditEventLabel, getOrganizationRoleLabel, normalizeMemberEmail } from "../scripts/organizations.js";
 
 function createFakeStorage() {
@@ -232,4 +233,25 @@ test("审计日志事件类型可以显示为中文", () => {
   assert.equal(getAuditEventLabel("member_promoted"), "升级成员");
   assert.equal(getAuditEventLabel("member_removed"), "移除成员");
   assert.equal(getAuditEventLabel("custom_event"), "custom_event");
+});
+
+test("反馈内容会校验长度并生成提交 payload", () => {
+  assert.equal(validateFeedbackMessage("坏").ok, false);
+  assert.equal(validateFeedbackMessage("这是一个有效反馈").ok, true);
+
+  const payload = createFeedbackPayload({
+    userId: "user-1",
+    organizationId: "org-1",
+    message: "  页面保存失败  ",
+    pageUrl: "https://example.com/app",
+    userAgent: "TestBrowser",
+    appVersion: "1.0.0"
+  });
+
+  assert.equal(payload.reporter_id, "user-1");
+  assert.equal(payload.organization_id, "org-1");
+  assert.equal(payload.message, "页面保存失败");
+  assert.equal(payload.page_url, "https://example.com/app");
+  assert.equal(payload.user_agent, "TestBrowser");
+  assert.equal(payload.app_version, "1.0.0");
 });

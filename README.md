@@ -80,6 +80,7 @@ http://localhost:8000
 | `scripts/cloudSync.js` | 云端同步逻辑 | 负责注册、登录、上传词条、下载词条 |
 | `scripts/permissions.js` | 权限逻辑 | 读取角色、判断管理员、读取/发布公共词库 |
 | `scripts/organizations.js` | 组织和工作区逻辑 | 负责创建组织、读取我的组织、判断组织里的角色 |
+| `scripts/feedback.js` | 反馈和报错逻辑 | 负责校验反馈、提交反馈、管理员读取最近反馈 |
 | `scripts/supabaseClient.js` | Supabase 客户端 | 用项目 URL 和 publishable key 连接真实云服务 |
 | `scripts/supabaseConfig.js` | Supabase 配置 | 填写 Supabase 项目 URL 和公开 key；不要放 secret key |
 | `scripts/version.js` | 版本检查逻辑 | 比较当前版本和最新版本，读取 `version.json` |
@@ -337,3 +338,17 @@ V11C 新增文件：
 |---|---|---|
 | GitHub branch protection | main 分支保护设置 | 仓库里的规则，不在代码文件里；要求 PR 合并前通过测试 |
 | `docs/v11c-branch-protection.md` | V11C 学习说明 | 解释 branch protection、required check 和 strict mode |
+
+## V12A 反馈 / 报错系统
+
+V12A 新增用户反馈入口，让登录用户可以提交问题描述，管理员可以查看最近反馈。
+
+这一版重点学习 support workflow：真实产品需要让用户把问题带着上下文反馈给团队。
+
+V12A 新增文件：
+
+| 文件 / 模块 | 中文用途 | 新手理解 |
+|---|---|---|
+| `scripts/feedback.js` | 反馈和报错逻辑 | 校验反馈内容、提交到 Supabase、读取最近反馈 |
+| `docs/v12a-feedback-reports-schema.sql` | 反馈数据库 SQL | 创建 `feedback_reports` 表和权限规则 |
+| `docs/v12a-feedback-reports.md` | V12A 学习说明 | 解释 feedback report、client metadata、support workflow |
