@@ -26,9 +26,9 @@ begin
     raise exception '请输入成员邮箱。';
   end if;
 
-  select profiles.id into target_user_id
-  from public.profiles
-  where lower(profiles.email) = normalized_email
+  select p.id into target_user_id
+  from public.profiles as p
+  where lower(p.email) = normalized_email
   limit 1;
 
   if target_user_id is null then
@@ -37,18 +37,18 @@ begin
 
   insert into public.organization_memberships (organization_id, user_id, role)
   values (org_id, target_user_id, 'member')
-  on conflict (organization_id, user_id) do nothing;
+  on conflict on constraint organization_memberships_pkey do nothing;
 
   return query
     select
-      profiles.id,
-      profiles.email,
-      organization_memberships.role,
-      organization_memberships.created_at
-    from public.organization_memberships
-    join public.profiles on profiles.id = organization_memberships.user_id
-    where organization_memberships.organization_id = org_id
-      and organization_memberships.user_id = target_user_id;
+      p.id as user_id,
+      p.email as email,
+      om.role as role,
+      om.created_at as created_at
+    from public.organization_memberships as om
+    join public.profiles as p on p.id = om.user_id
+    where om.organization_id = org_id
+      and om.user_id = target_user_id;
 end;
 $$;
 
@@ -64,15 +64,15 @@ security definer
 set search_path = public
 as $$
   select
-    profiles.id,
-    profiles.email,
-    organization_memberships.role,
-    organization_memberships.created_at
-  from public.organization_memberships
-  join public.profiles on profiles.id = organization_memberships.user_id
-  where organization_memberships.organization_id = org_id
+    p.id as user_id,
+    p.email as email,
+    om.role as role,
+    om.created_at as created_at
+  from public.organization_memberships as om
+  join public.profiles as p on p.id = om.user_id
+  where om.organization_id = org_id
     and public.is_org_member(org_id)
-  order by organization_memberships.created_at asc;
+  order by om.created_at asc;
 $$;
 
 grant execute on function public.add_organization_member(uuid, text) to authenticated;

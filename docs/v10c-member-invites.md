@@ -51,6 +51,8 @@ docs/v10c-member-invites-schema.sql
 4. 点击 `添加成员`。
 5. 成员列表里应该出现这个邮箱，角色为 `成员`。
 
+如果 SQL Editor 返回 `column reference "user_id" is ambiguous`，意思是数据库函数里有多个地方都叫 `user_id`，Postgres 不知道该用哪一个。最新版 SQL 已经用表别名和主键约束消除了这个歧义。
+
 ## 真实 SaaS 还差什么
 
 V10C 还不是完整邮件邀请系统。后续可以继续学习：
