@@ -1,0 +1,109 @@
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_type
+    where typname = 'organization_role'
+  ) then
+    create type public.organization_role as enum ('owner', 'member');
+  end if;
+end $$;
+
+create table if not exists public.organizations (
+  id uuid primary key default gen_random_uuid(),
+  name text not null check (char_length(name) between 2 and 40),
+  created_by uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.organization_memberships (
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  role public.organization_role not null default 'member',
+  created_at timestamptz not null default now(),
+  primary key (organization_id, user_id)
+);
+
+alter table public.organizations enable row level security;
+alter table public.organization_memberships enable row level security;
+
+create or replace function public.is_org_member(org_id uuid, user_id uuid default auth.uid())
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.organization_memberships
+    where organization_id = org_id
+      and organization_memberships.user_id = is_org_member.user_id
+  );
+$$;
+
+create or replace function public.is_org_owner(org_id uuid, user_id uuid default auth.uid())
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.organization_memberships
+    where organization_id = org_id
+      and organization_memberships.user_id = is_org_owner.user_id
+      and role = 'owner'
+  );
+$$;
+
+create or replace function public.handle_new_organization()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.organization_memberships (organization_id, user_id, role)
+  values (new.id, new.created_by, 'owner')
+  on conflict do nothing;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists on_organization_created on public.organizations;
+create trigger on_organization_created
+after insert on public.organizations
+for each row execute function public.handle_new_organization();
+
+drop policy if exists "Members can read their organizations" on public.organizations;
+create policy "Members can read their organizations"
+on public.organizations
+for select
+to authenticated
+using (public.is_org_member(id));
+
+drop policy if exists "Authenticated users can create organizations" on public.organizations;
+create policy "Authenticated users can create organizations"
+on public.organizations
+for insert
+to authenticated
+with check (auth.uid() = created_by);
+
+drop policy if exists "Members can read memberships in their organizations" on public.organization_memberships;
+create policy "Members can read memberships in their organizations"
+on public.organization_memberships
+for select
+to authenticated
+using (public.is_org_member(organization_id));
+
+drop policy if exists "Owners can manage memberships" on public.organization_memberships;
+create policy "Owners can manage memberships"
+on public.organization_memberships
+for all
+to authenticated
+using (public.is_org_owner(organization_id))
+with check (public.is_org_owner(organization_id));
+
+grant select, insert on table public.organizations to authenticated;
+grant select, insert, update, delete on table public.organization_memberships to authenticated;
