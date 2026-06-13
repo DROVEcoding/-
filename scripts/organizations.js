@@ -159,10 +159,26 @@ export async function loadOrganizationAuditLogs(supabase, organizationId) {
   };
 }
 
-export async function loadMyOrganizations(supabase) {
+export function mapMyOrganizationRows(rows, userId) {
+  return (rows || [])
+    .filter((item) => item.user_id === userId && item.organization)
+    .map((item) => ({
+      id: item.organization.id,
+      name: item.organization.name,
+      createdAt: item.organization.created_at,
+      role: item.role
+    }));
+}
+
+export async function loadMyOrganizations(supabase, userId) {
+  if (!userId) {
+    return { ok: true, organizations: [], message: "请先登录云端账号。" };
+  }
+
   const { data, error } = await supabase
     .from("organization_memberships")
-    .select("role, organization:organizations(id, name, created_at)")
+    .select("user_id, role, organization:organizations(id, name, created_at)")
+    .eq("user_id", userId)
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -171,14 +187,7 @@ export async function loadMyOrganizations(supabase) {
 
   return {
     ok: true,
-    organizations: (data || [])
-      .filter((item) => item.organization)
-      .map((item) => ({
-        id: item.organization.id,
-        name: item.organization.name,
-        createdAt: item.organization.created_at,
-        role: item.role
-      })),
+    organizations: mapMyOrganizationRows(data, userId),
     message: "已读取我的组织。"
   };
 }

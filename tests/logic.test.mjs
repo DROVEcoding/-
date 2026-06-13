@@ -10,7 +10,7 @@ import { updateTermContent } from "../scripts/termActions.js";
 import { compareVersions } from "../scripts/version.js";
 import { canManagePublicTerms, createDefaultProfile, getRoleLabel } from "../scripts/permissions.js";
 import { createFeedbackPayload, validateFeedbackMessage } from "../scripts/feedback.js";
-import { canManageMember, canManageOrganization, getAuditEventLabel, getOrganizationRoleLabel, normalizeMemberEmail } from "../scripts/organizations.js";
+import { canManageMember, canManageOrganization, getAuditEventLabel, getOrganizationRoleLabel, mapMyOrganizationRows, normalizeMemberEmail } from "../scripts/organizations.js";
 
 function createFakeStorage() {
   const data = new Map();
@@ -212,6 +212,27 @@ test("组织角色可以区分拥有者和成员", () => {
   assert.equal(getOrganizationRoleLabel("member"), "成员");
   assert.equal(canManageOrganization("owner"), true);
   assert.equal(canManageOrganization("member"), false);
+});
+
+test("我的组织只使用当前用户自己的成员角色", () => {
+  const rows = [
+    {
+      user_id: "owner-1",
+      role: "owner",
+      organization: { id: "org-1", name: "Test Org", created_at: "2026-06-13T00:00:00.000Z" }
+    },
+    {
+      user_id: "member-1",
+      role: "member",
+      organization: { id: "org-1", name: "Test Org", created_at: "2026-06-13T00:00:00.000Z" }
+    }
+  ];
+
+  const organizations = mapMyOrganizationRows(rows, "member-1");
+
+  assert.equal(organizations.length, 1);
+  assert.equal(organizations[0].id, "org-1");
+  assert.equal(organizations[0].role, "member");
 });
 
 test("成员邮箱会被标准化后再提交", () => {

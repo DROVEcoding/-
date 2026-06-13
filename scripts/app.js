@@ -400,7 +400,7 @@ async function refreshOrganizations() {
     return;
   }
 
-  const result = await loadMyOrganizations(supabase);
+  const result = await loadMyOrganizations(supabase, state.cloudUser.id);
   if (!result.ok) {
     state.organizations = [];
     state.organizationMembers = [];
