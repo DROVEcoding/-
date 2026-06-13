@@ -181,6 +181,28 @@
       <p class="form-message" id="permissionsMessage" hidden></p>
     </section>
 
+    <section class="feedback-panel" aria-label="反馈和报错">
+      <div>
+        <p class="eyebrow">Support Workflow</p>
+        <h2>反馈 / 报错</h2>
+        <p class="feedback-copy">遇到问题时提交反馈，系统会自动带上当前账号、组织、页面和浏览器信息。</p>
+      </div>
+      <div class="feedback-tools">
+        <form class="feedback-form" id="feedbackForm">
+          <label>
+            <span>问题描述</span>
+            <textarea id="feedbackInput" rows="4" maxlength="2000" placeholder="请写清楚你做了什么、看到什么问题、希望发生什么"></textarea>
+          </label>
+          <div class="feedback-actions">
+            <button class="primary-button" id="submitFeedbackButton" type="submit">提交反馈</button>
+            <button class="secondary-button" id="loadFeedbackButton" type="button" hidden>查看最近反馈</button>
+          </div>
+        </form>
+        <div class="feedback-list" id="feedbackList" aria-label="最近反馈"></div>
+        <p class="form-message" id="feedbackMessage" hidden></p>
+      </div>
+    </section>
+
     <section class="version-panel" aria-label="版本与更新">
       <div>
         <p class="eyebrow">Release System</p>

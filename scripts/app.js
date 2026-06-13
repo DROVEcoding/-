@@ -11,6 +11,7 @@ import {
   uploadOrganizationTermsToCloud
 } from "./cloudSync.js";
 import { createSupabaseClient, isSupabaseConfigured } from "./supabaseClient.js";
+import { createFeedbackPayload, loadFeedbackReports, submitFeedbackReport } from "./feedback.js";
 import { exportTermsBackup, importTermsBackup, loadTerms, loadTermsOrResetIfEmpty, resetTerms, saveTerms } from "./storage.js";
 import { CURRENT_VERSION, compareVersions, fetchLatestVersion } from "./version.js";
 import { canManagePublicTerms, getRoleLabel, loadProfile, loadPublicTerms, publishPublicTerms } from "./permissions.js";
@@ -83,6 +84,12 @@ const roleLabel = document.querySelector("#roleLabel");
 const loadPublicTermsButton = document.querySelector("#loadPublicTermsButton");
 const publishPublicTermsButton = document.querySelector("#publishPublicTermsButton");
 const permissionsMessage = document.querySelector("#permissionsMessage");
+const feedbackForm = document.querySelector("#feedbackForm");
+const feedbackInput = document.querySelector("#feedbackInput");
+const submitFeedbackButton = document.querySelector("#submitFeedbackButton");
+const loadFeedbackButton = document.querySelector("#loadFeedbackButton");
+const feedbackList = document.querySelector("#feedbackList");
+const feedbackMessage = document.querySelector("#feedbackMessage");
 const currentVersionLabel = document.querySelector("#currentVersionLabel");
 const latestVersionLabel = document.querySelector("#latestVersionLabel");
 const checkUpdateButton = document.querySelector("#checkUpdateButton");
@@ -95,6 +102,7 @@ const state = {
   organizations: [],
   organizationMembers: [],
   organizationAuditLogs: [],
+  feedbackReports: [],
   currentOrganizationId: null,
   isGuestMode: false,
   terms: [],
@@ -117,6 +125,7 @@ function renderApp() {
   renderCloudAuth();
   renderOrganizations();
   renderPermissions();
+  renderFeedback();
 
   const visibleTerms = filterTerms(state.terms, {
     query: state.query,
@@ -188,10 +197,62 @@ function showPermissionsMessage(message, type = "error") {
   permissionsMessage.hidden = !message;
 }
 
+function showFeedbackMessage(message, type = "error") {
+  feedbackMessage.textContent = message;
+  feedbackMessage.dataset.type = type;
+  feedbackMessage.hidden = !message;
+}
+
 function showOrganizationMessage(message, type = "error") {
   organizationMessage.textContent = message;
   organizationMessage.dataset.type = type;
   organizationMessage.hidden = !message;
+}
+
+function renderFeedback() {
+  const isLoggedIn = Boolean(state.cloudUser);
+  const canViewReports = canManagePublicTerms(state.profile);
+
+  submitFeedbackButton.disabled = !isLoggedIn;
+  feedbackInput.disabled = !isLoggedIn;
+  loadFeedbackButton.hidden = !canViewReports;
+
+  feedbackList.innerHTML = "";
+  if (!canViewReports) {
+    feedbackList.textContent = isLoggedIn ? "管理员可以查看最近反馈。" : "登录后可以提交反馈。";
+    return;
+  }
+
+  if (state.feedbackReports.length === 0) {
+    feedbackList.textContent = "还没有读取最近反馈。";
+    return;
+  }
+
+  state.feedbackReports.forEach((report) => {
+    const row = document.createElement("div");
+    row.className = "feedback-row";
+
+    const message = document.createElement("span");
+    message.textContent = report.message;
+
+    const meta = document.createElement("span");
+    meta.className = "feedback-meta";
+    meta.textContent = `${report.reporterEmail} / ${report.organizationName} / ${new Date(report.createdAt).toLocaleString()}`;
+
+    row.append(message, meta);
+    feedbackList.append(row);
+  });
+}
+
+function getFeedbackContextPayload() {
+  return createFeedbackPayload({
+    userId: state.cloudUser?.id,
+    organizationId: state.currentOrganizationId,
+    message: feedbackInput.value,
+    pageUrl: window.location.href,
+    userAgent: window.navigator.userAgent,
+    appVersion: CURRENT_VERSION
+  });
 }
 
 function getCurrentOrganization() {
@@ -334,11 +395,12 @@ async function refreshOrganizations() {
     state.organizations = [];
     state.organizationMembers = [];
     state.organizationAuditLogs = [];
+    state.feedbackReports = [];
     state.currentOrganizationId = null;
     return;
   }
 
-  const result = await loadMyOrganizations(supabase);
+  const result = await loadMyOrganizations(supabase, state.cloudUser.id);
   if (!result.ok) {
     state.organizations = [];
     state.organizationMembers = [];
@@ -663,6 +725,7 @@ guestModeButton.addEventListener("click", () => {
   state.organizations = [];
   state.organizationMembers = [];
   state.organizationAuditLogs = [];
+  state.feedbackReports = [];
   state.currentOrganizationId = null;
   state.terms = loadLocalFallbackTermsAfterCloudSignOut();
   showCloudMessage("");
@@ -680,6 +743,7 @@ exitIdentityButton.addEventListener("click", async () => {
   state.organizations = [];
   state.organizationMembers = [];
   state.organizationAuditLogs = [];
+  state.feedbackReports = [];
   state.currentOrganizationId = null;
   state.isGuestMode = false;
   state.terms = loadLocalFallbackTermsAfterCloudSignOut();
@@ -954,6 +1018,43 @@ publishPublicTermsButton.addEventListener("click", async () => {
     showPermissionsMessage(result.message, result.ok ? "success" : "error");
   } finally {
     publishPublicTermsButton.disabled = false;
+  }
+});
+
+feedbackForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  if (!state.cloudUser) {
+    showFeedbackMessage("请先登录云端账号。");
+    return;
+  }
+
+  submitFeedbackButton.disabled = true;
+  showFeedbackMessage("正在提交反馈...", "success");
+  try {
+    const result = await submitFeedbackReport(supabase, getFeedbackContextPayload());
+    if (!result.ok) {
+      showFeedbackMessage(result.message);
+      return;
+    }
+
+    feedbackInput.value = "";
+    showFeedbackMessage(result.message, "success");
+  } finally {
+    submitFeedbackButton.disabled = false;
+  }
+});
+
+loadFeedbackButton.addEventListener("click", async () => {
+  loadFeedbackButton.disabled = true;
+  showFeedbackMessage("正在读取最近反馈...", "success");
+  try {
+    const result = await loadFeedbackReports(supabase);
+    state.feedbackReports = result.ok ? result.reports : [];
+    renderApp();
+    showFeedbackMessage(result.message, result.ok ? "success" : "error");
+  } finally {
+    loadFeedbackButton.disabled = false;
   }
 });
 
