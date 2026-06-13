@@ -74,6 +74,7 @@ http://localhost:8000
 | 文件 / 模块 | 中文用途 | 新手理解 |
 |---|---|---|
 | `index.html` | 页面结构 | 决定页面上有哪些区域，比如标题、表单、筛选按钮、词条列表 |
+| `admin.html` | 超级管理员后台页面 | 给平台管理员查看全局用户、组织和反馈 |
 | `style.css` | 页面样式 | 决定页面长什么样，比如颜色、间距、卡片、按钮、手机适配 |
 | `scripts/data.js` | 默认词库 | 存放初始 20 个词条，以及分类和学习状态的中文名称 |
 | `scripts/auth.js` | 本地模拟登录 | 保存当前用户 session，用来学习账号登录的基本概念 |
@@ -81,6 +82,8 @@ http://localhost:8000
 | `scripts/permissions.js` | 权限逻辑 | 读取角色、判断管理员、读取/发布公共词库 |
 | `scripts/organizations.js` | 组织和工作区逻辑 | 负责创建组织、读取我的组织、判断组织里的角色 |
 | `scripts/feedback.js` | 反馈和报错逻辑 | 负责校验反馈、提交反馈、管理员读取最近反馈 |
+| `scripts/admin.js` | 后台页面交互 | 检查登录和管理员权限，并渲染后台页面 |
+| `scripts/adminData.js` | 后台数据逻辑 | 读取后台 RPC，并把数据库字段转换成页面好用的数据 |
 | `scripts/supabaseClient.js` | Supabase 客户端 | 用项目 URL 和 publishable key 连接真实云服务 |
 | `scripts/supabaseConfig.js` | Supabase 配置 | 填写 Supabase 项目 URL 和公开 key；不要放 secret key |
 | `scripts/version.js` | 版本检查逻辑 | 比较当前版本和最新版本，读取 `version.json` |
@@ -352,3 +355,19 @@ V12A 新增文件：
 | `scripts/feedback.js` | 反馈和报错逻辑 | 校验反馈内容、提交到 Supabase、读取最近反馈 |
 | `docs/v12a-feedback-reports-schema.sql` | 反馈数据库 SQL | 创建 `feedback_reports` 表和权限规则 |
 | `docs/v12a-feedback-reports.md` | V12A 学习说明 | 解释 feedback report、client metadata、support workflow |
+
+## V12B 超级管理员后台
+
+V12B 新增独立后台页面，让平台超级管理员查看全局用户、组织、组织拥有者/成员和反馈。
+
+这一版重点学习 super admin console：真实 SaaS 里，平台方需要一个不同于普通产品页面的后台视角。
+
+V12B 新增文件：
+
+| 文件 / 模块 | 中文用途 | 新手理解 |
+|---|---|---|
+| `admin.html` | 超级管理员后台页面 | 后台的页面入口，和普通词典页面分开 |
+| `scripts/admin.js` | 后台页面交互 | 检查当前账号是不是平台管理员，并把后台数据渲染到页面 |
+| `scripts/adminData.js` | 后台数据逻辑 | 调用 Supabase 后台 RPC，并整理成前端好用的数据 |
+| `docs/v12b-super-admin-console-schema.sql` | 后台数据库 SQL | 创建只允许超级管理员调用的全局读取函数 |
+| `docs/v12b-super-admin-console.md` | V12B 学习说明 | 解释超级管理员、组织拥有者、只读后台和真实 SaaS 后台边界 |
