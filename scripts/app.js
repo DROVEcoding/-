@@ -83,6 +83,7 @@ const auditLogList = document.querySelector("#auditLogList");
 const roleLabel = document.querySelector("#roleLabel");
 const loadPublicTermsButton = document.querySelector("#loadPublicTermsButton");
 const publishPublicTermsButton = document.querySelector("#publishPublicTermsButton");
+const adminEntryLink = document.querySelector("#adminEntryLink");
 const permissionsMessage = document.querySelector("#permissionsMessage");
 const feedbackForm = document.querySelector("#feedbackForm");
 const feedbackInput = document.querySelector("#feedbackInput");
@@ -478,6 +479,7 @@ function renderPermissions() {
 
   loadPublicTermsButton.disabled = !isLoggedIn;
   publishPublicTermsButton.hidden = !canManage;
+  adminEntryLink.hidden = !canManage;
 }
 
 function renderIdentity() {

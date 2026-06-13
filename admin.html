@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>超级管理员后台 - AI 工作字典</title>
+  <meta name="theme-color" content="#0f766e">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page-shell admin-shell">
+    <section class="admin-hero">
+      <div>
+        <p class="eyebrow">Super Admin Console</p>
+        <h1>超级管理员后台</h1>
+        <p class="intro">查看平台用户、组织、成员关系和用户反馈。</p>
+      </div>
+      <div class="admin-hero-actions">
+        <span id="adminIdentityLabel">正在检查身份...</span>
+        <a class="secondary-button" href="./index.html">返回词典</a>
+      </div>
+    </section>
+
+    <section class="admin-gate" id="adminGate" aria-live="polite"></section>
+
+    <section class="admin-console" id="adminContent" hidden>
+      <section class="admin-overview-grid" id="adminOverview" aria-label="平台总览"></section>
+
+      <section class="admin-panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Users</p>
+            <h2>用户</h2>
+          </div>
+        </div>
+        <div class="admin-list" id="adminUsers" aria-label="用户列表"></div>
+      </section>
+
+      <section class="admin-panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Organizations</p>
+            <h2>组织</h2>
+          </div>
+        </div>
+        <div class="admin-list" id="adminOrganizations" aria-label="组织列表"></div>
+      </section>
+
+      <section class="admin-panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Feedback</p>
+            <h2>反馈</h2>
+          </div>
+        </div>
+        <div class="admin-list" id="adminFeedback" aria-label="反馈列表"></div>
+      </section>
+    </section>
+  </main>
+
+  <script type="module" src="scripts/admin.js"></script>
+</body>
+</html>

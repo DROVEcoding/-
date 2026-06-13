@@ -11,6 +11,7 @@ import { compareVersions } from "../scripts/version.js";
 import { canManagePublicTerms, createDefaultProfile, getRoleLabel } from "../scripts/permissions.js";
 import { createFeedbackPayload, validateFeedbackMessage } from "../scripts/feedback.js";
 import { canManageMember, canManageOrganization, getAuditEventLabel, getOrganizationRoleLabel, mapMyOrganizationRows, normalizeMemberEmail } from "../scripts/organizations.js";
+import { formatAdminFeedbackReports, formatAdminOrganizations, formatAdminOverview, formatAdminUsers, shouldLoadAdminData } from "../scripts/adminData.js";
 
 function createFakeStorage() {
   const data = new Map();
@@ -275,4 +276,77 @@ test("反馈内容会校验长度并生成提交 payload", () => {
   assert.equal(payload.page_url, "https://example.com/app");
   assert.equal(payload.user_agent, "TestBrowser");
   assert.equal(payload.app_version, "1.0.0");
+});
+
+test("后台总览数据会转换成稳定数字", () => {
+  const overview = formatAdminOverview({
+    user_count: 3,
+    organization_count: 2,
+    feedback_count: 5,
+    open_feedback_count: 4
+  });
+
+  assert.deepEqual(overview, {
+    userCount: 3,
+    organizationCount: 2,
+    feedbackCount: 5,
+    openFeedbackCount: 4
+  });
+});
+
+test("后台用户列表会保留平台角色和组织数量", () => {
+  const users = formatAdminUsers([
+    {
+      id: "user-1",
+      email: "admin@example.com",
+      role: "admin",
+      created_at: "2026-06-13T00:00:00.000Z",
+      organization_count: 2
+    }
+  ]);
+
+  assert.equal(users[0].id, "user-1");
+  assert.equal(users[0].email, "admin@example.com");
+  assert.equal(users[0].role, "admin");
+  assert.equal(users[0].organizationCount, 2);
+});
+
+test("后台组织列表会展示拥有者和成员数量", () => {
+  const organizations = formatAdminOrganizations([
+    {
+      id: "org-1",
+      name: "客户成功组",
+      created_at: "2026-06-13T00:00:00.000Z",
+      owners: ["owner@example.com"],
+      member_count: 4
+    }
+  ]);
+
+  assert.equal(organizations[0].name, "客户成功组");
+  assert.deepEqual(organizations[0].owners, ["owner@example.com"]);
+  assert.equal(organizations[0].memberCount, 4);
+});
+
+test("后台反馈列表会展示提交人、组织和状态", () => {
+  const reports = formatAdminFeedbackReports([
+    {
+      id: "feedback-1",
+      message: "按钮没有反应",
+      status: "open",
+      created_at: "2026-06-13T00:00:00.000Z",
+      reporter_email: "user@example.com",
+      organization_name: "客户成功组"
+    }
+  ]);
+
+  assert.equal(reports[0].message, "按钮没有反应");
+  assert.equal(reports[0].status, "open");
+  assert.equal(reports[0].reporterEmail, "user@example.com");
+  assert.equal(reports[0].organizationName, "客户成功组");
+});
+
+test("只有平台管理员状态会读取后台数据", () => {
+  assert.equal(shouldLoadAdminData(null), false);
+  assert.equal(shouldLoadAdminData({ role: "user" }), false);
+  assert.equal(shouldLoadAdminData({ role: "admin" }), true);
 });
